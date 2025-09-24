@@ -21,7 +21,12 @@ export async function GET(request: Request) {
         const queryParams = Object.fromEntries(searchParams.entries());
 
         let batchId = queryParams.batchId;
-        let batch = await db("playwright_batches").select(["id", "hash", "meta", "created_at"]).where("id", batchId).first();
+        let batch = await db("playwright_batches")
+                .select(["id", "hash", "meta", "created_at"])
+                .where("id", batchId)
+                .orWhere("hash", batchId)
+                .first();
+        
 
         console.log(batch);
         if (!batch) {
@@ -97,6 +102,7 @@ export async function GET(request: Request) {
         let stats = batch["meta"];
 
         return NextResponse.json({
+            batch: batch,
             stats: {
                 ...stats?.stats,
                 reopened_count: reopenedCount,

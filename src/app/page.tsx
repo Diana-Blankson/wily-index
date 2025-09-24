@@ -10,6 +10,8 @@ import TestSummaryCard, { TestType } from "./components/TestSummaryCard";
 import MetricCard from "./components/MetricCard";
 import TestDetailModal, { TestDetail } from "./components/TestDetailModal";
 import { ValueType } from "recharts/types/component/DefaultTooltipContent";
+import { ComboBox, Item } from "@/components/ui/combobox";
+import { useParams, useSearchParams } from "next/navigation";
 
 
 
@@ -158,6 +160,7 @@ export interface Result {
         average_resolution: number,
         reopened_count: number
     },
+    batch: Batch,
     hotspots: PlaywrightResult[]
     created_at: string;
 }
@@ -171,6 +174,23 @@ export default function Home() {
     const [showTestModal, setShowTestModal] = useState(false);
     const [batches, setBatches] = useState<Batch[]>([]);
     const [result, setResult] = useState<Result | null>(null);
+    const searchParams = useSearchParams();
+    const [selectedBatch,setSelectedBatch] = useState<Item | null>(null)
+
+    useEffect(() => {
+        let batch = searchParams.get('batch')
+        if (batch) {
+            loadResults(batch).then(results => {
+                let res = results as Result
+                setResult(res);
+                setSelectedBatch({
+                    label: `${res.batch.hash} - ${moment(res.batch.created_at).fromNow()}`,
+                    value: res.batch.id
+                })
+                console.log("results", results);
+            });
+        }
+},[searchParams])
 
     const overallQualityScore = useMemo(() => {
         const avgResolutionRate = bugResolutionData.reduce((acc, item) => acc + item.rate, 0) / bugResolutionData.length;
@@ -249,7 +269,7 @@ export default function Home() {
 
                 {/* Controls */}
                 <div className="flex flex-wrap gap-4 mb-6">
-                    <div className="flex items-center gap-2">
+                    {/* <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-500"/>
                         <Select onValueChange={(field) => {
                             loadResults(field).then(results => {
@@ -275,7 +295,23 @@ export default function Home() {
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
                         <RefreshCw className="w-4 h-4"/>
                         Refresh Data
-                    </button>
+                    </button> */}
+                    
+                    <ComboBox 
+                        onChange={item => {
+                            loadResults(item.value).then(results => {
+                                setResult(results as Result);
+                                console.log("results", results);
+                            });
+                        }}
+                        selectedItem={selectedBatch}
+                        placeholder="Search Test Run"
+                        items={batches.map(item => {
+                        return {
+                            value: item.id ,
+                            label: `${item.hash} - ${moment(item.created_at).fromNow()}`}})
+                        } 
+                    ></ComboBox>
                 </div>
 
                 {/* Quality Score */}
