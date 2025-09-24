@@ -6,6 +6,10 @@ import { Bug, GitBranch, TestTube, AlertTriangle, TrendingUp, Calendar, Filter, 
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import moment from "moment";
 import { PlaywrightResult } from "./api/result/route";
+import TestSummaryCard, { TestType } from "./components/TestSummaryCard";
+import MetricCard from "./components/MetricCard";
+import TestDetailModal, { TestDetail } from "./components/TestDetailModal";
+import { ValueType } from "recharts/types/component/DefaultTooltipContent";
 
 
 
@@ -163,7 +167,7 @@ export default function Home() {
     const [selectedTimeframe, setSelectedTimeframe] = useState('6m');
     const [selectedMetric, setSelectedMetric] = useState('all');
     const [activeTab, setActiveTab] = useState('overview');
-    const [selectedTestDetail, setSelectedTestDetail] = useState(null);
+    const [selectedTestDetail, setSelectedTestDetail] = useState<{type: TestType, tests: TestDetail[]} | null>(null);
     const [showTestModal, setShowTestModal] = useState(false);
     const [batches, setBatches] = useState<Batch[]>([]);
     const [result, setResult] = useState<Result | null>(null);
@@ -220,133 +224,17 @@ export default function Home() {
         return response.json();
     }
 
-    const TestSummaryCard = ({ title, value, percentage, color, testType, onClick }) => (
-        <div
-            className="bg-white p-6 rounded-lg border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => onClick(testType)}
-        >
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-gray-600">{title}</p>
-                    <p className="text-3xl font-bold text-gray-900">{value?.toLocaleString()}</p>
-                    <p className={`text-sm ${color} flex items-center`}>
-                        {percentage.toFixed(1)}% of total tests
-                    </p>
-                </div>
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                    testType === 'passed' ? 'bg-green-100' :
-                        testType === 'failed' ? 'bg-red-100' :
-                            'bg-yellow-100'
-                }`}>
-          <span className={`text-2xl font-bold ${color}`}>
-            {testType === 'passed' ? '✓' :
-                testType === 'failed' ? '✗' :
-                    '⚠'}
-          </span>
-                </div>
-            </div>
-        </div>
-    );
+   
 
-    const TestDetailModal = ({ testType, tests, onClose }) => {
-        if (!testType) return null;
+   
 
-        const getStatusColor = (type) => {
-            switch(type) {
-                case 'passed': return 'text-green-600 bg-green-50';
-                case 'failed': return 'text-red-600 bg-red-50';
-                case 'flaky': return 'text-yellow-600 bg-yellow-50';
-                default: return 'text-gray-600 bg-gray-50';
-            }
-        };
-
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
-                    <div className="flex justify-between items-center p-6 border-b">
-                        <h2 className="text-xl font-bold capitalize">{testType} Tests ({tests.length})</h2>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 text-2xl"
-                        >
-                            ×
-                        </button>
-                    </div>
-                    <div className="overflow-y-auto max-h-[60vh] p-6">
-                        <div className="space-y-4">
-                            {tests.map((test, index) => (
-                                <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900">{test.name}</h3>
-                                            <p className="text-sm text-gray-600">{test.testId} • {test.repository}</p>
-                                        </div>
-                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(testType)}`}>
-                      {testType.charAt(0).toUpperCase() + testType.slice(1)}
-                    </span>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                        <div>
-                                            <span className="text-gray-500">Duration: </span>
-                                            <span className="font-medium">{test.duration}s</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">Last Run: </span>
-                                            <span className="font-medium">{test.lastRun}</span>
-                                        </div>
-                                        {test.failReason && (
-                                            <div className="md:col-span-1">
-                                                <span className="text-gray-500">Reason: </span>
-                                                <span className="font-medium text-red-600">{test.failReason}</span>
-                                            </div>
-                                        )}
-                                        {test.flakyPattern && (
-                                            <div className="md:col-span-2">
-                                                <span className="text-gray-500">Pattern: </span>
-                                                <span className="font-medium text-yellow-600">{test.flakyPattern}</span>
-                                            </div>
-                                        )}
-                                        {test.successRate && (
-                                            <div>
-                                                <span className="text-gray-500">Success Rate: </span>
-                                                <span className="font-medium">{(test.successRate * 100).toFixed(1)}%</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const handleTestSummaryClick = (testType) => {
+    const handleTestSummaryClick = (testType: TestType) => {
         setSelectedTestDetail({
             type: testType,
             tests: detailedTestData[testType] || []
         });
         setShowTestModal(true);
     };
-
-    const MetricCard = ({ title, value, change, icon: Icon, color }) => (
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-gray-600">{title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{value}</p>
-                    {change && (
-                        <p className={`text-sm ${change > 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
-                            <TrendingUp className="w-4 h-4 mr-1" />
-                            {change > 0 ? '+' : ''}{change}%
-                        </p>
-                    )}
-                </div>
-                <Icon className={`w-8 h-8 ${color}`} />
-            </div>
-        </div>
-    );
 
 
     return (
@@ -453,7 +341,7 @@ export default function Home() {
 
                                 <TestSummaryCard
                                     title="Tests Passed"
-                                    value={result?.stats?.expected}
+                                    value={testSummaryData.passed}
                                     percentage={testSummaryData.passRate}
                                     color="text-green-600"
                                     testType="passed"
@@ -462,7 +350,7 @@ export default function Home() {
 
                                 <TestSummaryCard
                                     title="Tests Failed"
-                                    value={result?.stats?.unexpected}
+                                    value={testSummaryData.failed}
                                     percentage={testSummaryData.failRate}
                                     color="text-red-600"
                                     testType="failed"
@@ -471,7 +359,7 @@ export default function Home() {
 
                                 <TestSummaryCard
                                     title="Flaky Tests"
-                                    value={result?.stats?.flaky}
+                                    value={testSummaryData.flaky}
                                     percentage={testSummaryData.flakyRate}
                                     color="text-yellow-600"
                                     testType="flaky"
@@ -527,14 +415,14 @@ export default function Home() {
                                 />
                                 <MetricCard
                                     title="Reopen Count"
-                                    value={result?.stats?.reopened_count}
+                                    value={result?.stats?.reopened_count ?? 0}
                                     change={-1.8}
                                     icon={RefreshCw}
                                     color="text-red-600"
                                 />
                                 <MetricCard
                                     title="Critical Hotspots"
-                                    value={result?.hotspots.length}
+                                    value={result?.hotspots.length ?? 0}
                                     change={-1}
                                     icon={AlertTriangle}
                                     color="text-orange-600"
@@ -673,7 +561,7 @@ export default function Home() {
                                     <XAxis type="number" tickFormatter={(value) => (value * 1000).toFixed(1)}/>
                                     <YAxis dataKey="repo" type="category" width={120}/>
                                     <Tooltip
-                                        formatter={(value) => [`${(value * 1000).toFixed(2)} per 1k tests`, 'Bug Density']}/>
+                                        formatter={(value: ValueType) => [`${(Number(value) * 1000).toFixed(2)} per 1k tests`, 'Bug Density']}/>
                                     <Bar dataKey="density" fill="#8b5cf6"/>
                                 </BarChart>
                             </ResponsiveContainer>
