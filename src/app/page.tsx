@@ -12,16 +12,17 @@ import { ValueType } from "recharts/types/component/DefaultTooltipContent";
 import { ComboBox, Item } from "@/components/ui/combobox";
 
 
-
+// Dummy Data for Bug Resolution for Demo Purpose
 const bugResolutionData = [
     { month: 'Jan', resolved: 85, total: 100, rate: 85 },
     { month: 'Feb', resolved: 92, total: 105, rate: 87.6 },
-    { month: 'Mar', resolved: 78, total: 95, rate: 82.1 },
-    { month: 'Apr', resolved: 88, total: 98, rate: 89.8 },
-    { month: 'May', resolved: 94, total: 110, rate: 85.5 },
-    { month: 'Jun', resolved: 96, total: 108, rate: 88.9 }
+    { month: 'Mar', resolved: 78, total: 95, rate: 92.1 },
+    { month: 'Apr', resolved: 88, total: 98, rate: 49.8 },
+    { month: 'May', resolved: 94, total: 110, rate: 55.5 },
+    { month: 'Jun', resolved: 96, total: 108, rate: 98.9 }
 ];
 
+// Dummy Data for Bug Density for Demo Purpose
 const bugDensityData = [
     { repo: 'frontend-app', bugs: 23, testsRun: 1250, density: 0.0184 },
     { repo: 'backend-api', bugs: 15, testsRun: 890, density: 0.0169 },
@@ -31,6 +32,7 @@ const bugDensityData = [
     { repo: 'notification-service', bugs: 6, testsRun: 780, density: 0.0077 }
 ];
 
+// Dummy Data for Reopen Rate for Demo Purpose
 const reopenRateData = [
     { category: 'UI Bugs', reopened: 12, total: 45, rate: 26.7 },
     { category: 'API Issues', reopened: 8, total: 52, rate: 15.4 },
@@ -39,6 +41,8 @@ const reopenRateData = [
     { category: 'Integration', reopened: 9, total: 35, rate: 25.7 }
 ];
 
+
+// Dummy Data for Test Coverage for Demo Purpose
 const hotspotData = [
     {
         repository: 'frontend-app',
@@ -194,15 +198,16 @@ export default function Home() {
         let failed = (result?.stats?.unexpected ?? 0);
         let flaky = (result?.stats?.flaky ?? 0);
         let skipped = (result?.stats?.skipped ?? 0);
+        let testCoverage = ((totalTest - skipped ) /  totalTest) * 100
         return {
             totalTests: totalTest,
             passed: passed,
             failed: failed,
             flaky: flaky,
-            passRate: (passed / totalTest) * 100,
-            failRate: (failed / totalTest) * 100 ,
-            flakyRate: (flaky / totalTest) * 100,
-            test_coverage: ((totalTest - skipped ) /  totalTest) * 100,
+            passRate: totalTest > 0 ? ((passed / totalTest) * 100) : 0,
+            failRate: totalTest > 0 ? ((failed / totalTest) * 100) : 0,
+            flakyRate: totalTest > 0 ? ((flaky / totalTest) * 100) : 0,
+            test_coverage: totalTest > 0 ? testCoverage : '0',
             average_reopened_rate: passed > 0 ? (result?.stats?.reopened_count ?? 0 / passed) * 100 : 0
         }
     },[result])
@@ -417,7 +422,7 @@ export default function Home() {
                                 />
                                 <MetricCard
                                     title="Avg Test Coverage"
-                                    value={`${testSummaryData.test_coverage}%`}
+                                    value={`${testSummaryData.test_coverage ?? 0}%`}
                                     change={4.1}
                                     icon={TestTube}
                                     color="text-green-600"
