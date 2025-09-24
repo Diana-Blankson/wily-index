@@ -11,7 +11,6 @@ import MetricCard from "./components/MetricCard";
 import TestDetailModal, { TestDetail } from "./components/TestDetailModal";
 import { ValueType } from "recharts/types/component/DefaultTooltipContent";
 import { ComboBox, Item } from "@/components/ui/combobox";
-import { useParams, useSearchParams } from "next/navigation";
 
 
 
@@ -174,11 +173,11 @@ export default function Home() {
     const [showTestModal, setShowTestModal] = useState(false);
     const [batches, setBatches] = useState<Batch[]>([]);
     const [result, setResult] = useState<Result | null>(null);
-    const searchParams = useSearchParams();
     const [selectedBatch,setSelectedBatch] = useState<Item | null>(null)
 
     useEffect(() => {
-        let batch = searchParams.get('batch')
+        const params = new URLSearchParams(window.location.search);
+        let batch = params.get('batch')
         if (batch) {
             loadResults(batch).then(results => {
                 let res = results as Result
@@ -190,7 +189,7 @@ export default function Home() {
                 console.log("results", results);
             });
         }
-},[searchParams])
+},[])
 
     const overallQualityScore = useMemo(() => {
         const avgResolutionRate = bugResolutionData.reduce((acc, item) => acc + item.rate, 0) / bugResolutionData.length;
