@@ -12,6 +12,8 @@ export interface PlaywrightResult {
     status: string;
     batch: string;
     created_at: string;
+    error: string
+    duration?: number
 }
 
 export async function GET(request: Request) {
@@ -103,6 +105,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             batch: batch,
+            current_results: currentResult,
             stats: {
                 ...stats?.stats,
                 reopened_count: reopenedCount,

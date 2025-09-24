@@ -3,7 +3,6 @@ import Image from "next/image";
 import React, {useState, useMemo, useEffect} from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
 import { Bug, GitBranch, TestTube, AlertTriangle, TrendingUp, Calendar, Filter, RefreshCw } from 'lucide-react';
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import moment from "moment";
 import { PlaywrightResult } from "./api/result/route";
 import TestSummaryCard, { TestType } from "./components/TestSummaryCard";
@@ -13,28 +12,6 @@ import { ValueType } from "recharts/types/component/DefaultTooltipContent";
 import { ComboBox, Item } from "@/components/ui/combobox";
 
 
-
-const detailedTestData = {
-    passed: [
-        { testId: 'TC_001', name: 'UserRegistration_ValidEmail', repository: 'auth-service', duration: 2.3, lastRun: '2 hours ago' },
-        { testId: 'TC_045', name: 'PaymentProcess_ValidCard', repository: 'payment-gateway', duration: 1.8, lastRun: '1 hour ago' },
-        { testId: 'TC_089', name: 'DataRetrieval_StandardQuery', repository: 'backend-api', duration: 0.9, lastRun: '30 min ago' },
-        { testId: 'TC_134', name: 'UINavigation_MainMenu', repository: 'frontend-app', duration: 3.2, lastRun: '45 min ago' },
-        { testId: 'TC_201', name: 'FileUpload_SmallFile', repository: 'mobile-app', duration: 1.5, lastRun: '1.5 hours ago' }
-    ],
-    failed: [
-        { testId: 'TC_023', name: 'LoginAttempt_InvalidPassword', repository: 'auth-service', duration: 0.5, lastRun: '15 min ago', failReason: 'Assertion failed: Expected status 401, got 500' },
-        { testId: 'TC_156', name: 'PaymentProcess_ExpiredCard', repository: 'payment-gateway', duration: 2.1, lastRun: '20 min ago', failReason: 'Connection timeout to payment gateway' },
-        { testId: 'TC_298', name: 'DatabaseQuery_LargeDataset', repository: 'backend-api', duration: 15.7, lastRun: '10 min ago', failReason: 'Query execution timeout after 15 seconds' },
-        { testId: 'TC_445', name: 'FormValidation_EmptyFields', repository: 'frontend-app', duration: 1.2, lastRun: '5 min ago', failReason: 'Element not found: #submit-button' }
-    ],
-    flaky: [
-        { testId: 'TC_067', name: 'NetworkRequest_SlowConnection', repository: 'mobile-app', duration: 8.3, lastRun: '1 hour ago', flakyPattern: 'Passes 60% of time, fails on timeout', successRate: 0.6 },
-        { testId: 'TC_189', name: 'LoadBalancer_MultipleRequests', repository: 'backend-api', duration: 4.7, lastRun: '2 hours ago', flakyPattern: 'Race condition in concurrent requests', successRate: 0.75 },
-        { testId: 'TC_234', name: 'CacheInvalidation_UserData', repository: 'auth-service', duration: 2.9, lastRun: '30 min ago', flakyPattern: 'Inconsistent cache clearing', successRate: 0.8 },
-        { testId: 'TC_356', name: 'AnimationTiming_ButtonClick', repository: 'frontend-app', duration: 1.8, lastRun: '45 min ago', flakyPattern: 'Timing-dependent UI interactions', successRate: 0.7 }
-    ]
-};
 
 const bugResolutionData = [
     { month: 'Jan', resolved: 85, total: 100, rate: 85 },
@@ -159,6 +136,7 @@ export interface Result {
         average_resolution: number,
         reopened_count: number
     },
+    current_results: PlaywrightResult[]
     batch: Batch,
     hotspots: PlaywrightResult[]
     created_at: string;
@@ -169,7 +147,7 @@ export default function Home() {
     const [selectedTimeframe, setSelectedTimeframe] = useState('6m');
     const [selectedMetric, setSelectedMetric] = useState('all');
     const [activeTab, setActiveTab] = useState('overview');
-    const [selectedTestDetail, setSelectedTestDetail] = useState<{type: TestType, tests: TestDetail[]} | null>(null);
+    const [selectedTestDetail, setSelectedTestDetail] = useState<{type: TestType, tests: PlaywrightResult[]} | null>(null);
     const [showTestModal, setShowTestModal] = useState(false);
     const [batches, setBatches] = useState<Batch[]>([]);
     const [result, setResult] = useState<Result | null>(null);
@@ -189,7 +167,7 @@ export default function Home() {
                 console.log("results", results);
             });
         }
-},[])
+    },[])
 
     const overallQualityScore = useMemo(() => {
         const avgResolutionRate = bugResolutionData.reduce((acc, item) => acc + item.rate, 0) / bugResolutionData.length;
@@ -215,6 +193,7 @@ export default function Home() {
         let passed = (result?.stats?.expected ?? 0);
         let failed = (result?.stats?.unexpected ?? 0);
         let flaky = (result?.stats?.flaky ?? 0);
+        let skipped = (result?.stats?.skipped ?? 0);
         return {
             totalTests: totalTest,
             passed: passed,
@@ -223,6 +202,7 @@ export default function Home() {
             passRate: (passed / totalTest) * 100,
             failRate: (failed / totalTest) * 100 ,
             flakyRate: (flaky / totalTest) * 100,
+            test_coverage: ((totalTest - skipped ) /  totalTest) * 100,
             average_reopened_rate: passed > 0 ? (result?.stats?.reopened_count ?? 0 / passed) * 100 : 0
         }
     },[result])
@@ -250,7 +230,7 @@ export default function Home() {
     const handleTestSummaryClick = (testType: TestType) => {
         setSelectedTestDetail({
             type: testType,
-            tests: detailedTestData[testType] || []
+            tests: result?.current_results?.filter(item => item.status == testType) ?? []
         });
         setShowTestModal(true);
     };
@@ -268,33 +248,6 @@ export default function Home() {
 
                 {/* Controls */}
                 <div className="flex flex-wrap gap-4 mb-6">
-                    {/* <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-500"/>
-                        <Select onValueChange={(field) => {
-                            loadResults(field).then(results => {
-                                setResult(results as Result);
-                                console.log("results", results);
-                            });
-                        }}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Select Batch" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {
-                                    batches.map(item => {
-                                        return (
-                                            <SelectItem key={item.id} value={item.id} >{item.hash} - {moment(item.created_at).fromNow()}</SelectItem>
-                                        )
-                                    })
-                                }
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <button
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
-                        <RefreshCw className="w-4 h-4"/>
-                        Refresh Data
-                    </button> */}
                     
                     <ComboBox 
                         onChange={item => {
@@ -464,7 +417,7 @@ export default function Home() {
                                 />
                                 <MetricCard
                                     title="Avg Test Coverage"
-                                    value="67.2%"
+                                    value={`${testSummaryData.test_coverage}%`}
                                     change={4.1}
                                     icon={TestTube}
                                     color="text-green-600"

@@ -1,3 +1,5 @@
+import moment from "moment";
+import { PlaywrightResult } from "../api/result/route";
 import { TestType } from "./TestSummaryCard";
 
 export interface TestDetail {
@@ -13,7 +15,7 @@ export interface TestDetail {
 
 interface TestDetailModalProps {
   testType?: TestType;
-  tests: TestDetail[];
+  tests: PlaywrightResult[];
   onClose: () => void;
 }
 
@@ -48,11 +50,11 @@ const TestDetailModal = ({ testType, tests, onClose }: TestDetailModalProps) => 
                 <div className="overflow-y-auto max-h-[60vh] p-6">
                     <div className="space-y-4">
                         {tests.map((test, index) => (
-                            <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
+                            <div key={index} className="border overflow-hidden rounded-lg p-4 hover:bg-gray-50">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">{test.name}</h3>
-                                        <p className="text-sm text-gray-600">{test.testId} • {test.repository}</p>
+                                        <h3 className="font-semibold text-gray-900">{test.test}</h3>
+                                        <p className="text-sm text-gray-600">{test.batch} • {test.file}</p>
                                     </div>
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(testType)}`}>
                   {testType.charAt(0).toUpperCase() + testType.slice(1)}
@@ -61,30 +63,30 @@ const TestDetailModal = ({ testType, tests, onClose }: TestDetailModalProps) => 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                     <div>
                                         <span className="text-gray-500">Duration: </span>
-                                        <span className="font-medium">{test.duration}s</span>
+                                        <span className="font-medium">{(test.duration ?? 0) / 1000} secs</span>
                                     </div>
                                     <div>
                                         <span className="text-gray-500">Last Run: </span>
-                                        <span className="font-medium">{test.lastRun}</span>
+                                        <span className="font-medium">{moment(test.created_at).fromNow()}</span>
                                     </div>
-                                    {test.failReason && (
+                                    {test.error && (
                                         <div className="md:col-span-1">
                                             <span className="text-gray-500">Reason: </span>
-                                            <span className="font-medium text-red-600">{test.failReason}</span>
+                                            <span className="font-medium overflow-hidden text-red-600">{test.error}</span>
                                         </div>
                                     )}
-                                    {test.flakyPattern && (
+                                    {/* {test.flakyPattern && (
                                         <div className="md:col-span-2">
                                             <span className="text-gray-500">Pattern: </span>
                                             <span className="font-medium text-yellow-600">{test.flakyPattern}</span>
                                         </div>
-                                    )}
-                                    {test.successRate && (
+                                    )} */}
+                                    {/* {test.successRate && (
                                         <div>
                                             <span className="text-gray-500">Success Rate: </span>
                                             <span className="font-medium">{(test.successRate * 100).toFixed(1)}%</span>
                                         </div>
-                                    )}
+                                    )} */}
                                 </div>
                             </div>
                         ))}
